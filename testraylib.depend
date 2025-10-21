@@ -1,0 +1,6 @@
+# depslib dependency file v1.0
+1760967679 source:e:\dhtriet\testraylib\main.cpp
+	<bits/stdc++.h>
+	<raylib.h>
+	<deque>
+
