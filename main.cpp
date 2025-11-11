@@ -145,42 +145,75 @@ public:
     Vector2 huong = {1, 0};
     bool them_doan = false;
 
+    Texture2D texHead;
+    Texture2D texBody;
+
     ran()
     {
+        // Khởi tạo vị trí ban đầu
         than[0].vi_tri = {6, 9};
         than[1].vi_tri = {5, 9};
         than[2].vi_tri = {4, 9};
+
+        // Nạp ảnh đầu và thân
+        texHead = LoadTexture("Graphics/Head.png");
+        texBody = LoadTexture("Graphics/Body.png");
+    }
+
+    ~ran()
+    {
+        UnloadTexture(texHead);
+        UnloadTexture(texBody);
     }
 
     void Draw()
     {
         for (int i = 0; i < do_dai; i++)
         {
-            Rectangle r = {75 + than[i].vi_tri.x * kich_thuoc_o, 75 + than[i].vi_tri.y * kich_thuoc_o, (float)kich_thuoc_o, (float)kich_thuoc_o};
+            Vector2 pos = than[i].vi_tri;
+           Rectangle destRec = {
+    75 + pos.x * kich_thuoc_o + kich_thuoc_o / 2.0f,
+    75 + pos.y * kich_thuoc_o + kich_thuoc_o / 2.0f,
+    (float)kich_thuoc_o,
+    (float)kich_thuoc_o
+};
+            Rectangle srcRec = {0, 0, (float)texBody.width, (float)texBody.height};
+            float rotation = 0.0f;
+
             if (i == 0)
-                DrawRectangleRounded(r, 0.5, 6, RED);   // đầu rắn màu đỏ
+            {
+                // Đầu rắn
+                srcRec.width = texHead.width;
+                srcRec.height = texHead.height;
+
+              if (huong.x == 1) rotation = 90;    // đi sang phải → xoay -90
+else if (huong.x == -1) rotation = -90; // đi sang trái → xoay +90
+else if (huong.y == -1) rotation = 0;  // đi lên → đúng hướng ảnh
+else if (huong.y == 1) rotation = 180; // đi xuống → xoay 180
+
+                DrawTexturePro(texHead, srcRec, destRec,
+                               Vector2{kich_thuoc_o / 2.0f, kich_thuoc_o / 2.0f},
+                               rotation, WHITE);
+            }
             else
-                DrawRectangleRounded(r, 0.5, 6, mau_ran); // thân rắn màu xanh đậm
+            {
+                // Thân rắn
+                DrawTexturePro(texBody, srcRec, destRec,
+                               Vector2{kich_thuoc_o / 2.0f, kich_thuoc_o / 2.0f},
+                               0, WHITE);
+            }
         }
     }
 
     void Update()
     {
-        // Dịch mảng từ cuối về đầu
         for (int i = do_dai; i > 0; i--)
             than[i].vi_tri = than[i - 1].vi_tri;
 
-        // Cập nhật đầu
         than[0].vi_tri = cong_vector2(than[0].vi_tri, huong);
 
-        if (!them_doan)
+        if (them_doan)
         {
-            // nếu không thêm đoạn thì giữ do_dai (chúng ta đã dịch và sẽ effectively bỏ phần cuối bằng không tăng do_dai)
-            // nothing extra needed because we wrote into than[do_dai] but didn't increment do_dai
-        }
-        else
-        {
-            // nếu thêm đoạn thì tăng do_dai để giữ phần mới
             do_dai++;
             them_doan = false;
         }
@@ -597,101 +630,96 @@ void ve_credit()
 }
 void ve_about()
 {
-    // Nền với hiệu ứng gradient
+    // ===== NỀN GRADIENT =====
     for (int y = 0; y < chieu_cao_man_hinh; y++)
     {
         float ratio = (float)y / chieu_cao_man_hinh;
-        Color rowColor = Color
-        {
-            (unsigned char)(173 * (1 - ratio) + 100 * ratio),
-            (unsigned char)(204 * (1 - ratio) + 150 * ratio),
-            (unsigned char)(96 * (1 - ratio) + 100 * ratio),
+        Color rowColor = {
+            (unsigned char)(173 * (1 - ratio) + 120 * ratio),
+            (unsigned char)(204 * (1 - ratio) + 180 * ratio),
+            (unsigned char)(96 * (1 - ratio) + 110 * ratio),
             255
         };
         DrawRectangle(0, y, chieu_rong_man_hinh, 1, rowColor);
     }
 
-    // Vẽ khung viền trang trí
-    DrawRectangleRounded((Rectangle)
-    {
-        50, 50, chieu_rong_man_hinh - 100, chieu_cao_man_hinh - 100
-    }, 0.05f, 10, Fade(xanh_nhat, 0.3f));
-    DrawRectangleRoundedLines((Rectangle)
-    {
-        50, 50, chieu_rong_man_hinh - 100, chieu_cao_man_hinh - 100
-    }, 0.05f, 10, xanh_dam);
+    // ===== KHUNG =====
+    float margin = 60;
+    Rectangle khung = {margin, margin, (float)(chieu_rong_man_hinh - margin * 2), (float)(chieu_cao_man_hinh - margin * 2)};
+    DrawRectangleRounded(khung, 0.05f, 10, Fade(xanh_nhat, 0.25f));
+    DrawRectangleRoundedLines(khung, 0.05f, 10, xanh_dam);
 
-    // Tiêu đề
-    const char* title = "ABOUT";
-    int titleWidth = MeasureText(title, 60);
-    DrawText(title, chieu_rong_man_hinh/2 - titleWidth/2 + 3, 83, 60, Fade(BLACK, 0.3f));
-    DrawText(title, chieu_rong_man_hinh/2 - titleWidth/2, 80, 60, mau_vang);
+    // ===== TIÊU ĐỀ =====
+    const char *title = "TUTORIAL";
+    int titleSize = 64;
+    int titleWidth = MeasureText(title, titleSize);
+    int titleX = chieu_rong_man_hinh / 2 - titleWidth / 2;
+    DrawText(title, titleX + 3, 83, titleSize, Fade(BLACK, 0.4f));
+    DrawText(title, titleX, 80, titleSize, mau_vang);
 
-    // Nội dung (có thể thêm danh sách xếp hạng sau)
-    DrawText("Coming Soon...", chieu_rong_man_hinh/2 - MeasureText("Coming Soon...", 40)/2,
-             chieu_cao_man_hinh/2, 40, xanh_dam);
+    // ===== NỘI DUNG =====
+    int left = khung.x + 120;
+    int top = 200;
+    int fontSize = 28;
+    int lineSpace = 38;
+    int maxWidth = chieu_rong_man_hinh - 300; // độ rộng vùng text
+    Color textColor = xanh_dam;
 
-    // Nút return
-    DrawText("Press 4 to return to main menu",
-             chieu_rong_man_hinh/2 - MeasureText("Press 4 to return to main menu", 20)/2,
-             chieu_cao_man_hinh - 100, 20, Fade(xanh_dam, 0.8f));
-}
-/*void ve_cai_dat()
-{
-    // Nền với hiệu ứng gradient
-    for (int y = 0; y < chieu_cao_man_hinh; y++)
+    const char *noi_dung[] = {
+        "You can move up, left, down, or right using the arrow keys or W A S D.",
+        "There are two simple rules you must follow when playing: do not hit a wall and do not bite your own tail.",
+        "Crashing into a wall or your tail will end the game immediately."
+    };
+
+    int so_dong = sizeof(noi_dung) / sizeof(noi_dung[0]);
+
+    // Hàm tạm: ngắt dòng khi câu vượt maxWidth
+    auto drawWrappedText = [&](const char *text, int x, int &y, int fontSize, int lineSpace, int maxWidth, Color color)
     {
-        float ratio = (float)y / chieu_cao_man_hinh;
-        Color rowColor = Color
+        const char *start = text;
+        char line[256] = "";
+        int textWidth = 0;
+        while (*start)
         {
-            (unsigned char)(173 * (1 - ratio) + 100 * ratio),
-            (unsigned char)(204 * (1 - ratio) + 150 * ratio),
-            (unsigned char)(96 * (1 - ratio) + 100 * ratio),
-            255
-        };
-        DrawRectangle(0, y, chieu_rong_man_hinh, 1, rowColor);
-    }
+            int len = 0;
+            line[0] = '\0';
+            const char *lastSpace = nullptr;
 
-    DrawRectangleRounded((Rectangle)
-    {
-        50, 50, chieu_rong_man_hinh - 100, chieu_cao_man_hinh - 100
-    }, 0.05f, 10, Fade(xanh_nhat, 0.3f));
-    DrawRectangleRoundedLines((Rectangle)
-    {
-        50, 50, chieu_rong_man_hinh - 100, chieu_cao_man_hinh - 100
-    }, 0.05f, 10, xanh_dam);
-
-    const char* title = "SETTING";
-    int titleWidth = MeasureText(title, 60);
-    DrawText(title, chieu_rong_man_hinh/2 - titleWidth/2 + 3, 83, 60, Fade(BLACK, 0.3f));
-    DrawText(title, chieu_rong_man_hinh/2 - titleWidth/2, 80, 60, mau_vang);
-
-    // Vẽ lựa chọn bản đồ
-    DrawText("CHOOSE MAP:", 220, 200, 35, xanh_dam);
-    const char* mapNames[2] = {"BASIC MAP", "MAZE MAP"};
-
-    for (int i = 0; i < 2; i++)
-    {
-        int textWidth = MeasureText(mapNames[i], 30);
-        int yPos = 260 + i * 60;
-        Color textColor = (i == ban_do_duoc_chon) ? mau_do : xanh_dam;
-
-        if (i == ban_do_duoc_chon)
-        {
-            DrawRectangleRounded((Rectangle)
+            while (*start && textWidth < maxWidth)
             {
-                (float)(chieu_rong_man_hinh/2 - textWidth/2 - 25), (float)(yPos - 5), (float)(textWidth + 50), 45
-            }, 0.5f, 10, Fade(xanh_nhat, 0.4f));
-            DrawText(">", chieu_rong_man_hinh/2 - textWidth/2 - 50 + 10 * sin(GetTime() * 4), yPos, 30, mau_vang);
+                line[len++] = *start;
+                line[len] = '\0';
+                textWidth = MeasureText(line, fontSize);
+                if (*start == ' ') lastSpace = start;
+                start++;
+                if (textWidth >= maxWidth && lastSpace)
+                {
+                    start = lastSpace + 1;
+                    line[lastSpace - text + 1] = '\0';
+                    break;
+                }
+            }
+            DrawText(line, x, y, fontSize, color);
+            y += lineSpace;
+            textWidth = 0;
         }
+    };
 
-        DrawText(mapNames[i], chieu_rong_man_hinh/2 - textWidth/2, yPos, 30, textColor);
+    int y = top;
+    for (int i = 0; i < so_dong; i++)
+    {
+        drawWrappedText(noi_dung[i], left, y, fontSize, lineSpace, maxWidth, textColor);
+        y += 10; // khoảng cách giữa các đoạn
     }
 
-    // Hướng dẫn
-    DrawText("Press UP/DOWN to change map", chieu_rong_man_hinh/2 - MeasureText("Press UP/DOWN to change map", 20)/2, 460, 20, xanh_dam);
-    DrawText("Press 5 to return to main menu", chieu_rong_man_hinh/2 - MeasureText("Press 5 to return to main menu", 20)/2, 500, 20, xanh_dam);
-}*/
+    // ===== NÚT QUAY LẠI =====
+    const char *back = "Press 4 to return to main menu";
+    int backWidth = MeasureText(back, 22);
+    DrawText(back,
+             chieu_rong_man_hinh / 2 - backWidth / 2,
+             chieu_cao_man_hinh - 90, 22, Fade(xanh_dam, 0.9f));
+}
+
 void ve_cai_dat()
 {
     // Nền gradient
