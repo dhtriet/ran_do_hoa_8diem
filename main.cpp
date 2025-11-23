@@ -4,26 +4,26 @@ using namespace std;
 
 // ==================== COLORS & MENU ====================
 Color mau_do = {255, 0, 0, 255};
+Color mau_do_nhat = {255, 120, 120, 255};
 Color mau_xanh = {173, 204, 96, 255};
 Color xanh_dam = {43, 51, 24, 255};
 Color xanh_nhat = {200, 220, 150, 255};
 Color mau_ran = {60, 100, 40, 255};
 Color mau_vang = {255, 215, 0, 255};
-
+Color mau_vang_nhat = {255, 255, 150, 255};
 const int chieu_rong_man_hinh = 800;
 const int chieu_cao_man_hinh = 800;
 const int kich_thuoc_o = 30;
 const int so_o = 20;
-// 0: Basic Map, 1: Maze Map
+// 0 Basic Map, 1 Maze Map
 int ban_do_duoc_chon = 0;
 int do_kho_duoc_chon = 1; // 0 = Dễ, 1 = Bình thường, 2 = Khó
 float toc_do_ran = 0.1f;
 const int so_item_menu = 5;
 string text_menu[so_item_menu] = {"NEW GAME", "QUIT GAME", "CREDIT", "ABOUT","SETTING"};
 int item_duoc_chon = 0;
-int man_hinh_hien_tai = 0; // 0: Menu, 1: Credit, 2: New tro_choi, 3: Ranking, 4: About
+int man_hinh_hien_tai = 0; // 0 Menu, 1 Credit, 2 New tro_choi, 3 Ranking, 4 About
 
-// ==================== SNAKE GAME CLASSES ====================
 bool cho_phep_di_chuyen = false;
 double thoi_gian_cap_nhat_cuoi = 0;
 
@@ -35,7 +35,7 @@ bool so_sanh_vector2(Vector2 v1, Vector2 v2)
 {
     return (v1.x == v2.x) && (v1.y == v2.y);
 }
-// ==================== MAZE MAP (LABYRINTH STYLE) ====================
+// ==================== MAZE MAP ====================
 vector<Vector2> tuong_me_cung =
 {
     {1,1},{2,1},{3,1},{4,1},{5,1},
@@ -96,17 +96,34 @@ bool su_kien_duoc_kich_hoat(double interval)
     }
     return false;
 }
-void ve_nen_caro()
+void ve_nen_caro(int state)
 {
+    Color c1, c2;
+    if (state == 0)
+    {
+        // map vàng
+        c1 = mau_vang;
+        c2 = mau_vang_nhat;
+    }
+    else if (state == 1)
+    {
+        // map xanh lá
+        c1 = mau_xanh;
+        c2 = xanh_nhat;
+    }
+    else
+    {
+        // map đỏ
+        c1 = mau_do;
+        c2 = mau_do_nhat;
+    }
     for (int y = 0; y < so_o; y++)
     {
         for (int x = 0; x < so_o; x++)
         {
             // Tạo hiệu ứng caro xen kẽ
-            if ((x + y) % 2 == 0)
-                DrawRectangle(75 + x * kich_thuoc_o, 75 + y * kich_thuoc_o, kich_thuoc_o, kich_thuoc_o, mau_xanh);
-            else
-                DrawRectangle(75 + x * kich_thuoc_o, 75 + y * kich_thuoc_o, kich_thuoc_o, kich_thuoc_o, xanh_nhat);
+            Color m = ((x + y) % 2 == 0) ? c1 : c2;
+            DrawRectangle(75 + x * kich_thuoc_o, 75 + y * kich_thuoc_o, kich_thuoc_o, kich_thuoc_o, m);
         }
     }
 }
@@ -131,7 +148,6 @@ void ve_tuong_me_cung()
         );
     }
 }
-// ==================== STRUCT ====================
 struct doan
 {
     Vector2 vi_tri;
@@ -148,6 +164,11 @@ public:
     Texture2D texHead;
     Texture2D texBody;
 
+    // 3 color sets for the snake
+    Texture2D headGreen, bodyGreen;
+    Texture2D headRed, bodyRed;
+    Texture2D headYellow, bodyYellow;
+
     ran()
     {
         // Khởi tạo vị trí ban đầu
@@ -155,15 +176,32 @@ public:
         than[1].vi_tri = {5, 9};
         than[2].vi_tri = {4, 9};
 
-        // Nạp ảnh đầu và thân
-        texHead = LoadTexture("Graphics/Head.png");
-        texBody = LoadTexture("Graphics/Body.png");
+        // Nạp 3 bộ ảnh đầu và thân (green, red, yellow)
+        headGreen  = LoadTexture("Graphics/Head.png");
+        bodyGreen  = LoadTexture("Graphics/Body.png");
+
+        headRed    = LoadTexture("Graphics/Head2.png");
+        bodyRed    = LoadTexture("Graphics/Body2.png");
+
+        headYellow = LoadTexture("Graphics/Head1.png");
+        bodyYellow = LoadTexture("Graphics/Body1.png");
+
+        // Mặc định dùng bộ xanh
+        texHead = headGreen;
+        texBody = bodyGreen;
     }
 
     ~ran()
     {
         UnloadTexture(texHead);
         UnloadTexture(texBody);
+        // Unload the extra textures
+        UnloadTexture(headGreen);
+        UnloadTexture(bodyGreen);
+        UnloadTexture(headRed);
+        UnloadTexture(bodyRed);
+        UnloadTexture(headYellow);
+        UnloadTexture(bodyYellow);
     }
 
     void Draw()
@@ -171,12 +209,13 @@ public:
         for (int i = 0; i < do_dai; i++)
         {
             Vector2 pos = than[i].vi_tri;
-           Rectangle destRec = {
-    75 + pos.x * kich_thuoc_o + kich_thuoc_o / 2.0f,
-    75 + pos.y * kich_thuoc_o + kich_thuoc_o / 2.0f,
-    (float)kich_thuoc_o,
-    (float)kich_thuoc_o
-};
+            Rectangle destRec =
+            {
+                75 + pos.x * kich_thuoc_o + kich_thuoc_o / 2.0f,
+                75 + pos.y * kich_thuoc_o + kich_thuoc_o / 2.0f,
+                (float)kich_thuoc_o,
+                (float)kich_thuoc_o
+            };
             Rectangle srcRec = {0, 0, (float)texBody.width, (float)texBody.height};
             float rotation = 0.0f;
 
@@ -186,10 +225,10 @@ public:
                 srcRec.width = texHead.width;
                 srcRec.height = texHead.height;
 
-              if (huong.x == 1) rotation = 90;    // đi sang phải → xoay -90
-else if (huong.x == -1) rotation = -90; // đi sang trái → xoay +90
-else if (huong.y == -1) rotation = 0;  // đi lên → đúng hướng ảnh
-else if (huong.y == 1) rotation = 180; // đi xuống → xoay 180
+                if (huong.x == 1) rotation = 90;    // đi sang phải → xoay -90
+                else if (huong.x == -1) rotation = -90; // đi sang trái → xoay +90
+                else if (huong.y == -1) rotation = 0;  // đi lên → đúng hướng ảnh
+                else if (huong.y == 1) rotation = 180; // đi xuống → xoay 180
 
                 DrawTexturePro(texHead, srcRec, destRec,
                                Vector2{kich_thuoc_o / 2.0f, kich_thuoc_o / 2.0f},
@@ -234,18 +273,27 @@ class thuc_an
 public:
     Vector2 vi_tri_thuc_an;
     Texture2D hinh_texture;
+    Texture2D foodRed;
+    Texture2D foodYellow;
+    Texture2D foodGreen;
 
     thuc_an()
     {
-        Image image = LoadImage("Graphics/food.png");
-        hinh_texture = LoadTextureFromImage(image);
-        UnloadImage(image);
+        // Load 3 food textures (red, yellow, green)
+        foodRed    = LoadTexture("Graphics/food.png");
+        foodYellow = LoadTexture("Graphics/food2.png");
+        foodGreen  = LoadTexture("Graphics/food1.png");
+
+        // default
+        hinh_texture = foodRed;
         vi_tri_thuc_an = sinh_o_ngau_nhien(); // tạm khởi tạo
     }
 
     ~thuc_an()
     {
-        UnloadTexture(hinh_texture);
+        UnloadTexture(foodRed);
+        UnloadTexture(foodYellow);
+        UnloadTexture(foodGreen);
     }
 
     void Draw()
@@ -254,83 +302,42 @@ public:
     }
 
     Vector2 sinh_o_ngau_nhien()
-{
-    int x = GetRandomValue(0, so_o - 1);
-    int y = GetRandomValue(0, so_o - 1);
-    return Vector2{(float)x, (float)y};
-}
+    {
+        int x = GetRandomValue(0, so_o - 1);
+        int y = GetRandomValue(0, so_o - 1);
+        return Vector2{(float)x, (float)y};
+    }
+    Vector2 sinh_vi_tri_ngau_nhien(ran &snake, bool mang_tuong[so_o][so_o])
+    {
+        Vector2 vi_tri;
+        bool conflict;
+        do
+        {
+            conflict = false;
+            vi_tri = sinh_o_ngau_nhien();
 
-    // đổi nhận ran & kiểm tra mảng than
-    /* Vector2 sinh_vi_tri_ngau_nhien(ran &snake) {
-         Vector2 vi_tri = sinh_o_ngau_nhien();
-         bool conflict = false;
-         while (true) {
-             conflict = false;
-             for (int i = 0; i < snake.do_dai; i++) {
-                 if (so_sanh_vector2(vi_tri, snake.than[i].vi_tri)) {
-                     conflict = true;
-                     break;
-                 }
-             }
-             if (!conflict) break;
-             vi_tri = sinh_o_ngau_nhien();
-         }
-         return vi_tri;
-     }*/
-//    Vector2 sinh_vi_tri_ngau_nhien(ran &snake, bool mang_tuong[so_o][so_o])
-//    {
-//        Vector2 vi_tri = sinh_o_ngau_nhien();
-//        bool conflict = false;
-//
-//        while (true)
-//        {
-//            conflict = false;
-//
-//            // Không được trùng với thân rắn
-//            for (int i = 0; i < snake.do_dai; i++)
-//            {
-//                if (so_sanh_vector2(vi_tri, snake.than[i].vi_tri))
-//                {
-//                    conflict = true;
-//                    break;
-//                }
-//            }
-//
-//            // Không được nằm trong tường
-//            if (mang_tuong[(int)vi_tri.y][(int)vi_tri.x])
-//            {
-//                conflict = true;
-//            }
-//
-//            if (!conflict) break; // Nếu vị trí hợp lệ thì dừng
-//            vi_tri = sinh_o_ngau_nhien(); // Nếu không hợp lệ thì sinh lại
-//        }
-//
-//        return vi_tri;
-//    }
-Vector2 sinh_vi_tri_ngau_nhien(ran &snake, bool mang_tuong[so_o][so_o])
-{
-    Vector2 vi_tri;
-    bool conflict;
-    do {
-        conflict = false;
-        vi_tri = sinh_o_ngau_nhien();
+            // Kiểm tra tường
+            if (mang_tuong[(int)vi_tri.y][(int)vi_tri.x]) conflict = true;
 
-        // Kiểm tra tường
-        if (mang_tuong[(int)vi_tri.y][(int)vi_tri.x]) conflict = true;
-
-        // Kiểm tra thân rắn
-        for (int i = 0; i < snake.do_dai; i++) {
-            if (so_sanh_vector2(vi_tri, snake.than[i].vi_tri)) {
-                conflict = true;
-                break;
+            // Kiểm tra thân rắn
+            for (int i = 0; i < snake.do_dai; i++)
+            {
+                if (so_sanh_vector2(vi_tri, snake.than[i].vi_tri))
+                {
+                    conflict = true;
+                    break;
+                }
             }
-        }
 
-    } while (conflict);
-    return vi_tri;
-}
+        }
+        while (conflict);
+        return vi_tri;
+    }
 };
+
+
+
+
 bool mang_tuong[so_o][so_o] = {false};
 
 void khoi_tao_tuong()
@@ -340,6 +347,24 @@ void khoi_tao_tuong()
         mang_tuong[(int)wall.y][(int)wall.x] = true;
     }
 }
+int doc_diem_cao_tu_file()
+{
+    FILE* f = fopen("data_score.txt", "r");
+    if (!f) return 0;  // nếu chưa có file => điểm cao = 0
+    int high = 0;
+    fscanf(f, "%d", &high);
+    fclose(f);
+    return high;
+}
+
+void ghi_diem_cao_ra_file(int diem)
+{
+    FILE* f = fopen("data_score.txt", "w");
+    if (!f) return;
+    fprintf(f, "%d", diem);
+    fclose(f);
+}
+
 class tro_choi
 {
 public:
@@ -347,7 +372,9 @@ public:
     thuc_an food;
     bool dang_choi = true;
     int diem = 0;
-    int diem_cao = 0;
+    int diem_cao = doc_diem_cao_tu_file();
+    int trang_thai = 0;   // 0 = green, 1 = red, 2 = yellow
+    int dem_an = 0;
     Sound am_thanh_an, am_thanh_va_tuong;
     Texture2D icon_tao;
     Texture2D icon_cup;
@@ -364,7 +391,7 @@ public:
         icon_cup = LoadTextureFromImage(recordImg);
         UnloadImage(recordImg);
         // Sinh food lần đầu tránh trùng với rắn
-     food.vi_tri_thuc_an = food.sinh_vi_tri_ngau_nhien(snake, mang_tuong);
+        food.vi_tri_thuc_an = food.sinh_vi_tri_ngau_nhien(snake, mang_tuong);
     }
 
     ~tro_choi()
@@ -384,7 +411,7 @@ public:
                                        (float)kich_thuoc_o * so_o + 10,
                                        (float)kich_thuoc_o * so_o + 10},
                              5, xanh_dam);
-        DrawText("Retro ran", 75 - 5, 20, 40, xanh_dam);
+        DrawText("ran", 75 - 5, 20, 40, xanh_dam);
 
 // Vẽ biểu tượng quả táo
         DrawTexture(icon_tao, 65, 715, WHITE);
@@ -405,7 +432,7 @@ public:
             kiem_tra_va_cham_duoi();
             //mecung
             if(ban_do_duoc_chon==1)
-            kiem_tra_va_cham_me_cung();
+                kiem_tra_va_cham_me_cung();
         }
     }
 
@@ -413,10 +440,42 @@ public:
     {
         if (so_sanh_vector2(snake.than[0].vi_tri, food.vi_tri_thuc_an))
         {
+            // Sinh food mới (không trùng)
             food.vi_tri_thuc_an = food.sinh_vi_tri_ngau_nhien(snake,mang_tuong);
             snake.them_doan = true;
             diem++;
-            if (diem > diem_cao) diem_cao = diem; // cập nhật kỷ lục
+            dem_an++;
+
+            if (dem_an >= 5)   // đủ 5 quả → đổi trạng thái
+            {
+                dem_an = 0;    // reset bộ đếm
+                trang_thai = (trang_thai + 1) % 3;
+
+                if (trang_thai == 0)
+                {
+                    snake.texHead = snake.headGreen;
+                    snake.texBody = snake.bodyGreen;
+                    food.hinh_texture = food.foodRed;
+                }
+                else if (trang_thai == 1)
+                {
+                    snake.texHead = snake.headRed;
+                    snake.texBody = snake.bodyRed;
+                    food.hinh_texture = food.foodYellow;
+                }
+                else
+                {
+                    snake.texHead = snake.headYellow;
+                    snake.texBody = snake.bodyYellow;
+                    food.hinh_texture = food.foodGreen;
+                }
+            }
+
+            if (diem > diem_cao) // cập nhật kỷ lục
+            {
+                diem_cao = diem;
+                ghi_diem_cao_ra_file(diem_cao);
+            }
             PlaySound(am_thanh_an);
         }
     }
@@ -446,6 +505,8 @@ public:
         food.vi_tri_thuc_an = food.sinh_vi_tri_ngau_nhien(snake,mang_tuong);
         dang_choi = false;
         diem = 0;
+        dem_an=0;
+        trang_thai=0;
         PlaySound(am_thanh_va_tuong);
     }
     //mecung
@@ -573,8 +634,7 @@ void ve_credit()
     // Vẽ thông tin credit với background cho dễ đọc
     const char* lines[] =
     {
-        "HOC VIEN HOANG GIA PI TI AI TI",
-        "TRO CHOI GIUN SAN MOI",
+        "TRO CHOI RAN SAN MOI",
         "DUONG HONG TRIET B24DCAT267",
         "TRAN DUC CUONG B24DCAT037",
         "NGUYEN HAI MINH B24DCAT187"
@@ -634,7 +694,8 @@ void ve_about()
     for (int y = 0; y < chieu_cao_man_hinh; y++)
     {
         float ratio = (float)y / chieu_cao_man_hinh;
-        Color rowColor = {
+        Color rowColor =
+        {
             (unsigned char)(173 * (1 - ratio) + 120 * ratio),
             (unsigned char)(204 * (1 - ratio) + 180 * ratio),
             (unsigned char)(96 * (1 - ratio) + 110 * ratio),
@@ -665,7 +726,8 @@ void ve_about()
     int maxWidth = chieu_rong_man_hinh - 300; // độ rộng vùng text
     Color textColor = xanh_dam;
 
-    const char *noi_dung[] = {
+    const char *noi_dung[] =
+    {
         "You can move up, left, down, or right using the arrow keys or W A S D.",
         "There are two simple rules you must follow when playing: do not hit a wall and do not bite your own tail.",
         "Crashing into a wall or your tail will end the game immediately."
@@ -726,7 +788,8 @@ void ve_cai_dat()
     for (int y = 0; y < chieu_cao_man_hinh; y++)
     {
         float ratio = (float)y / chieu_cao_man_hinh;
-        Color rowColor = {
+        Color rowColor =
+        {
             (unsigned char)(173 * (1 - ratio) + 100 * ratio),
             (unsigned char)(204 * (1 - ratio) + 150 * ratio),
             (unsigned char)(96 * (1 - ratio) + 100 * ratio),
@@ -809,7 +872,7 @@ void ve_cai_dat()
 
     // Hướng dẫn nhập số và quay về menu
     DrawText("Press 1/2 to choose map", chieu_rong_man_hinh / 2 - MeasureText("Press 1/2 to choose map", 20)/2, 650, 20, xanh_dam);
-  DrawText("Press 7/8/9 to choose difficulty", chieu_rong_man_hinh / 2 - MeasureText("Press 7/8/9 to choose difficulty", 20)/2 , 670, 20, xanh_dam);
+    DrawText("Press 7/8/9 to choose difficulty", chieu_rong_man_hinh / 2 - MeasureText("Press 7/8/9 to choose difficulty", 20)/2, 670, 20, xanh_dam);
     DrawText("Press 5 to return to main menu", chieu_rong_man_hinh / 2 - MeasureText("Press 5 to return to main menu", 20)/2, 690, 20, xanh_dam);
 }
 
@@ -819,24 +882,24 @@ void ve_choi_moi(tro_choi &game)
     ClearBackground(mau_xanh);
     if (ban_do_duoc_chon == 0)
     {
-        ve_nen_caro(); // Map cơ bản
+        ve_nen_caro(game.trang_thai); // Map cơ bản
     }
     else
     {
-        ve_nen_caro();
+        ve_nen_caro(game.trang_thai);
         ve_tuong_me_cung(); // Map mê cung
     }
-     double toc_do_ran = 0.1;
+    double toc_do_ran = 0.1;
 
-if (do_kho_duoc_chon == 0) {
-    toc_do_ran = 0.5; // Dễ
-}
-else if (do_kho_duoc_chon == 1) {
-    toc_do_ran = 0.25; // Trung bình
-}
-else {
-    toc_do_ran = 0.1; // Khó
-}
+    if (do_kho_duoc_chon == 0)
+        toc_do_ran = 0.5; // Dễ
+
+    else if (do_kho_duoc_chon == 1)
+        toc_do_ran = 0.25; // Trung bình
+
+    else
+        toc_do_ran = 0.1; // Khó
+
     if (su_kien_duoc_kich_hoat(toc_do_ran))
     {
         cho_phep_di_chuyen = true;
@@ -941,16 +1004,16 @@ int main()
         }
         if (man_hinh_hien_tai == 4)
         {
-        // Xử lý input bằng số
-    if (IsKeyPressed(KEY_ONE)) ban_do_duoc_chon = 0;   // 1 → BASIC MAP
-    if (IsKeyPressed(KEY_TWO)) ban_do_duoc_chon = 1;   // 2 → MAZE MAP
+            // Xử lý input bằng số
+            if (IsKeyPressed(KEY_ONE)) ban_do_duoc_chon = 0;   // 1 → BASIC MAP
+            if (IsKeyPressed(KEY_TWO)) ban_do_duoc_chon = 1;   // 2 → MAZE MAP
 
-    if (IsKeyPressed(KEY_SEVEN)) do_kho_duoc_chon = 0; // 7 → EASY
-    if (IsKeyPressed(KEY_EIGHT)) do_kho_duoc_chon = 1; // 8 → MEDIUM
-    if (IsKeyPressed(KEY_NINE)) do_kho_duoc_chon = 2;  // 9 → HARD
+            if (IsKeyPressed(KEY_SEVEN)) do_kho_duoc_chon = 0; // 7 → EASY
+            if (IsKeyPressed(KEY_EIGHT)) do_kho_duoc_chon = 1; // 8 → MEDIUM
+            if (IsKeyPressed(KEY_NINE)) do_kho_duoc_chon = 2;  // 9 → HARD
 
-    // Quay về menu chính
-    if (IsKeyPressed(KEY_FIVE)) man_hinh_hien_tai = 0;
+            // Quay về menu chính
+            if (IsKeyPressed(KEY_FIVE)) man_hinh_hien_tai = 0;
         }
         // ================= Vẽ =================
         BeginDrawing();
@@ -971,6 +1034,7 @@ int main()
         {
             ve_about();
         }
+
         else if (man_hinh_hien_tai == 4)
         {
             ve_cai_dat();
